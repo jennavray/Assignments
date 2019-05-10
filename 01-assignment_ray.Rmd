@@ -1,0 +1,57 @@
+Assignment 1
+Your first commit: hello_world.Rmd
+
+For your first assignment, I want you to create a file called 01-assignment_<lastname>.Rmd
+in your github repo in the assignments folder. It should contain the following
+elements:
+
+A sentence that says "Hello, World"
+
+```{r}
+"Hello, World"
+```
+
+
+R output that summarizes one of the variables in the colllege.Rdata
+dataset
+##Have to update packages and load data first.
+
+install.packages("tidyverse")
+
+```{r scorecard} 
+rm(list=ls())
+library(tidyverse)
+```
+
+## Load in the data
+load("C:/Users/rayjm2/Desktop/Scripts/college.Rdata")
+
+##Now we can create R output that summarizes one of the variables in the colllege.Rdata
+
+Data for grab just the data for Vanderbilt, then look only at the average test scores and admit rate. 
+I want to see the admission rate at Boston College.
+
+```{r filter}
+sc%>%filter(instnm=="Boston College")
+
+sc%>%filter(instnm=="Boston College")%>%select(instnm, adm_rate)
+
+
+##If you have extra time, you can do the following:
+##Calculate the average earnings for individuals at the most selective colleges,
+##then compare that with individuals at the least selective colleges in the
+##dataset.
+
+Find a way to determine whether colleges with very high SAT scores tend
+to be larger or smaller than colleges with low SAT scores.
+
+sc%>%filter(sat_avg<1200)%>%select(instnm, adm_rate)
+sc%>%filter(sat_avg<1200)%>%select(instnm, adm_rate)
+
+Plot the relationship between cost and debt. What do you see? Does this
+surprise you?
+
+##I tried multiple times to create a plot, but I kept getting an error for costt4_a not found
+plot(costt4_a, debt_mdn, xlab="costt4_a", ylab=debt_m, pch=100)
+    
+Now, provide separate plots for cost and debt by control of the institution.
