@@ -1,0 +1,179 @@
+---
+title: 'Assignment #2'
+output:
+  pdf_document: default
+  word_document: default
+---
+Assignment 2
+For this assignment, you'll be working with the county level dataset to predict a home ownership rates using conditional means. You'll need to select the
+county-level characteristics that you think might be related to home ownership
+rates. 
+
+```{r  include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(plotly)
+library(Metrics)
+```
+
+
+```{r data}
+load("C:/Users/rayjm2/Desktop/Scripts/pd.Rdata")
+```
+
+
+```{r data explain}
+load("C:/Users/rayjm2/Desktop/Scripts/pd_lab_explain.Rdata")
+```
+
+Please complete the following steps:
+1. Calculate the mean of the outcome.
+## Filter and select
+```{r}
+
+pd%>%filter(county=="Davidson County, TN")%>%
+  select(county,homeown_rate)
+
+```
+
+  
+2. Use your mean as a prediction: Create a new variable that consists of themean of the outcome.
+
+Our working example will be based on predicting homeownership rate in a given county. Suppose we want to know what income level we can expect for a geographic area based on observed characteristics, such as the proportion of the population with a bachelor's degree. How would we predict the income based on what we know about the geographic area? 
+
+Let's begin by plotting the data to see what it looks like. To do this I need to first rank the counties by income. To create a rank variable that will be stored in the `pd` dataset, I use the `mutate` command. This creates a variable based on some calculation then stores it in the same dataset. I'm then going to plot incomes for each county in descending rank order. Using the `plotly` library I can make this interactive so we know which counties we're talking about. 
+
+This code creates a new variable called percapinc_rank, which ranked all counties on the basis of their income.
+```{r simple_plots}
+## Create a rank variable for income 
+pd<-pd%>%mutate(homeown_rate=rank(homeown_rate))
+```
+
+```{r}
+
+##Unconditional Average
+pd%>%summarise(mean_homeown_rate=mean(homeown_rate,na.rm=TRUE))
+
+##Unconditional Average as a Predictor
+pd<-pd%>%mutate(mean_homeown_rate0=mean(homeown_rate,na.rm=TRUE))
+
+##Plotting
+gg<-ggplot(data=pd,aes(y=homeown_rate,x=homeown_rate_rank,color="Actual"))
+gg<-gg+geom_point(alpha=.5,size=.5)
+gg<-gg+geom_point(aes(y=mean_homeown_rate,x=homeown_rate_rank,
+                  color="Predicted: Unconditional Mean"),
+                  size=.5)
+gg<-gg+xlab("Rank of Homeownership")+ylab("Homeownership")
+gg<-gg+scale_color_manual(name="Type",
+                          values=c("Actual"="black",
+                          "Predicted: Unconditional Mean"="blue")
+                          )
+gg<-gg+theme(legend.position="bottom")
+
+
+##Save for later
+
+gg2<-gg
+
+```
+
+
+
+
+3. Calculate a summary measure of the errors for each observation-the difference between your prediction and the outcome.
+
+This is of course a terrible prediction. In the absence of any other information, it's many times the best we can do, but we really ought to be able to do better. 
+
+To understand how far off we are, we need to summarize our errors. We will use different ways of doing this this semester, but let's start with a very standard one, Root Mean Squared Error, or RMSE. An error term is the vertical distance between each point and its prediction. The RMSE is the square root of the sum of squared errors. (Q:why do we square them?). 
+
+$$RMSE(\hat{Y})=\sqrt{ 1/n \sum_{i=1}^n(Y_i-\hat{Y_i})^2} $$
+
+The error term for our prediction using unconditional means will be stored in the variable $e1$. This variable will be equal to the actual value of per capita income `percapinc.2010` minues the mean value of per capita income `mean_percapinc.2010`. 
+
+```{r error_terms}
+pd<-pd%>%mutate(e1=homeown_rate-mean_homeown_rate0)
+```
+
+```{r}
+## RMSE
+
+rmse_uncond_mean<-rmse(pd$homeown_rate,pd$mean_homeown_rate0)
+
+rmse_uncond_mean
+```
+
+4. Calculate the mean of the outcome at levels of a predictor variable.
+
+To incorporate additional information into the mean, we need to calculate averages at levels of other predictors. Let's calculate the average per capita income at different levels of college education. The code below will calculate average income across counties at four different levels of college education-- the four quantiles of college education in the dataset. 
+
+```{r condtl_mean_single}
+##Condtional Average across a single variable
+
+## Create a variable for quartiles of college education
+pd<-pd%>%mutate(coll_grad_level=ntile(coll_grad_pc,4))
+
+pd%>%select(county,coll_grad_pc,coll_grad_level)%>%View()
+
+table(pd$coll_grad_level)
+
+##pd<-pd%>%mutate(coll_grad_level=ntile(coll_grad_pc,4))
+
+pd<-pd%>%group_by(coll_grad_level)%>% ## Group by predictor
+  ##Calculate mean at each level of predictor
+  mutate(pred_income_college=mean(homeown_rate))%>%
+  ## Ungroup
+  ungroup()%>% 
+  #Rank by prediction, with ties sorted randomly
+  mutate(homeown_rate=rank(pred_income_college,ties.method="random"))
+
+pd%>%select(county,coll_grad_pc,coll_grad_level,pred_income_college)%>%View()
+ 
+
+```
+
+To visualize this we can use a similar graphic as before: 
+
+```{r}
+pd%>%group_by(coll_grad_level)%>% ## Group by predictor
+  ##Calculate mean at each level of predictor
+  summarise(pred_income_college=mean(homeown_rate))
+
+gg<-ggplot(data=pd,aes(x=pred_income_college_rank,y=homeown_rate,color="Actual"))
+gg<-gg+geom_point(alpha=.5,size=.5)
+gg<-gg+geom_point(aes(x=pred_income_college_rank,y=pred_income_college,color="Predicted:Conditional Mean, 1 var"))
+gg<-gg+ scale_color_manual("Type",values=c("Predicted:Conditional Mean, 1 var"="red","Actual"="black"))
+gg<-gg+theme(legend.position="bottom")
+gg<-gg+xlab("Rank")+ylab("HomeOwn_Rate")
+gg
+
+##Save for later
+gg3<-gg
+
+```
+
+
+5. Use these conditional means as a prediction: for every county, use the conditional mean to provide a ''best guess" as to that county's level of the outcome.
+
+```{r}
+pd<-pd%>%group_by(coll_grad_level,homeown_rate)%>% ## Group by predictor
+  ##Calculate mean at each level of predictor
+  mutate(pred_income_coll_and_homeown=mean(percapinc.2010))%>% 
+  ## Ungroup
+  ungroup()%>% 
+  #Rank by prediction, with ties sorted randomly
+  mutate(pred_income_coll_and_homeown_rank=rank(pred_income_coll_and_homeown,
+                                                ties.method="random"))
+```
+
+
+```{r}
+rmse_cond_mean_two<-rmse(pd$homeown_rate,pd$coll_grad_level)
+rmse_cond_mean_two
+```
+
+6. Calculate a summary measureof the error in your predictions.  I expect that the .Rmd file you submit will run cleanly, and that there shouldn't be any errors. Use LOTS of comments to tell me what you are doing.
+
+
+
+
