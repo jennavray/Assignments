@@ -1,0 +1,100 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+##Assignment 3
+##Jennifer Ray
+
+##Use the attrition dataset to answer the following questions. 
+##As always, your assignment must be turned in as a .Rmd file.
+
+```{r  include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(forcats)
+library(RColorBrewer)
+library(knitr)
+```
+
+## Loading Data 
+```{r}
+load("C:/Users/rayjm2/Desktop/Scripts/week3_cnd/attrition.Rdata")
+```
+
+
+```{r}
+
+at<-at%>%mutate(attrit=ifelse(Attrition=="Yes",1,0))
+
+table(at$Attrition)
+
+table(at$attrit)
+
+table(at$attrit,at$Attrition)
+```
+
+##Create a graph that shows the distribution of monthly income.
+```{r}
+gg<-ggplot(at,aes(x=Department,fill=MonthlyIncome))
+gg<-gg+geom_bar()
+gg
+``` 
+
+
+
+##Create a graph that shows the average level of monthly income by field of education.
+
+```{r}
+## Summarize attrition by monthly income AND field of education
+at_sum<-at%>%
+  group_by(MonthlyIncome,EducationField)%>%
+  summarize(attr_avg=mean(attrit))
+
+## Get the results
+at_sum
+```
+
+```{r}
+## PLot it using a bar plot
+gg<-ggplot(at_sum,aes(x=fct_reorder(EducationField,attr_avg),y=attr_avg,color=MonthlyIncome))
+gg<-gg+geom_bar(stat="identity",aes(fill=MonthlyIncome),position="dodge")
+gg<-gg+ylab("Pr(Attrition)")+xlab("EducationField")
+gg
+```
+
+
+
+##Create another graph that shows average level of monthly income by field of education and gender.
+
+```{r}
+
+at_sum<-at%>%
+  group_by(MonthlyIncome,EducationField,Gender)%>%
+  summarize(attr_avg=mean(attrit))%>%
+  arrange(-attr_avg)
+
+at_sum
+```
+
+##Create a graph that shows average levels of monthly income by field of education, gender and job level (scale of 1-5, highest ranked employees are 5)     
+
+```{r}
+at_sum<-at%>%
+  group_by(MonthlyIncome,EducationField,Gender,JobLevel)%>%
+  summarize(attr_avg=mean(attrit))%>%
+  ungroup()%>%
+  arrange(attr_avg)
+
+at_sum
+
+gg<-ggplot(at_sum,aes(x=fct_reorder(MonthlyIncome,attr_avg),y=attr_avg))
+gg<-gg+geom_bar(stat="identity",aes(fill=Gender),position="dodge")
+gg<-gg+facet_wrap(~EducationField+JobLevel,ncol=5)
+
+gg<-gg+ylab("Proportion of Employees Who Departed")+xlab("Category")
+gg<-gg+theme(axis.text.x = element_text(angle = 50, hjust = 1))
+gg<-gg+ggtitle("Departure by Education Field and Job Level")
+
+
+```
