@@ -1,0 +1,86 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+##Assignment 5
+##Jennifer Ray
+
+```{r,echo=FALSE}
+rm(list=ls())
+library(tidyverse)
+library(forcats)
+library(ModelMetrics)
+library(modelr)
+```
+
+
+##In this assignment, you'll be asked to predict reading scores using the ELS data.
+
+##1. Create a regression that predicts reading scores as a function of SES, using the training data.
+
+$$Y=\beta_0+\beta_1 x_1 +\beta_2 x_2+ ... \beta_k x_k + \epsilon$$
+  
+```{r}
+load("els.RData")
+```
+
+```{r}
+els%>%summarize(mean(bynels2m,na.rm=TRUE))
+
+gg<-ggplot(els,aes(x=bynels2m))
+gg<-gg+geom_histogram()
+gg
+```
+
+```{r}
+gg<-ggplot(els,aes(x=bynels2m))
+gg<-gg+geom_density()
+gg
+```
+```{r}
+
+#Model 1: simple bivariate regression
+
+mod1<-lm(bynels2m~byses1,data=els) #outcome on left, predictor on right 
+
+summary(mod1)
+confint(mod1)
+
+g1<-ggplot(els, aes(x=byses1,y=bynels2m))+ #specify data and x and y
+           geom_point(shape=1)+ #specify points
+           geom_smooth(method=lm) #ask for lm line
+g1
+
+els<-els%>%add_predictions(mod1)%>%rename(pred1=pred) #predict using data in memory
+ 
+## RMSE
+rmse_1<-modelr::rmse(mod1,els);rmse_1
+
+```
+
+
+
+##2. Report the RMSE from a validation of your model using the testing data.
+##RMSE = 12.272
+
+##3. Add another covariate to your model from 1.
+```{r}
+#Part 2: Multiple regression
+
+mod2<-lm(bynels2m~as.factor(bypared_nohs)+
+           byses1,
+          data=els)
+
+summary(mod2) 
+
+els<-els%>%add_predictions(mod2)%>%rename(pred2=pred)
+
+rmse_2<-modelr::rmse(mod2,els); rmse_2
+
+```
+
+##4. Again report the RMSE from a validation of your model using the testing data. Did you model improve? By how much?
+ ##RMSE = 12.275
+ ## This did not improve much... only by 0.003
+ 
