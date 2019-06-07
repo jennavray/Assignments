@@ -28,13 +28,13 @@ load("els.RData")
 ```{r}
 els%>%summarize(mean(bynels2m,na.rm=TRUE))
 
-gg<-ggplot(els,aes(x=bynels2m))
+gg<-ggplot(els,aes(x=bynels2r))
 gg<-gg+geom_histogram()
 gg
 ```
 
 ```{r}
-gg<-ggplot(els,aes(x=bynels2m))
+gg<-ggplot(els,aes(x=bynels2r))
 gg<-gg+geom_density()
 gg
 ```
@@ -42,12 +42,12 @@ gg
 
 #Model 1: simple bivariate regression
 
-mod1<-lm(bynels2m~byses1,data=els) #outcome on left, predictor on right 
+mod1<-lm(bynels2r~byses1,data=els) #outcome on left, predictor on right 
 
 summary(mod1)
 confint(mod1)
 
-g1<-ggplot(els, aes(x=byses1,y=bynels2m))+ #specify data and x and y
+g1<-ggplot(els, aes(x=byses1,y=bynels2r))+ #specify data and x and y
            geom_point(shape=1)+ #specify points
            geom_smooth(method=lm) #ask for lm line
 g1
@@ -62,13 +62,13 @@ rmse_1<-modelr::rmse(mod1,els);rmse_1
 
 
 ##2. Report the RMSE from a validation of your model using the testing data.
-##RMSE = 12.272
+##RMSE = 8.55
 
 ##3. Add another covariate to your model from 1.
 ```{r}
 #Part 2: Multiple regression
 
-mod2<-lm(bynels2m~as.factor(bypared_nohs)+
+mod2<-lm(bynels2r~as.factor(bypared_nohs)+
            byses1,
           data=els)
 
@@ -81,6 +81,7 @@ rmse_2<-modelr::rmse(mod2,els); rmse_2
 ```
 
 ##4. Again report the RMSE from a validation of your model using the testing data. Did you model improve? By how much?
- ##RMSE = 12.275
- ## This did not improve much... only by 0.003
+ ##RMSE = 8.55
+ ## This did not improve much... only by 0.01
+ ## This is not a comparable predictor
  
