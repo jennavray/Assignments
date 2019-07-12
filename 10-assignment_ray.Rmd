@@ -1,0 +1,174 @@
+---
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+##Assignment 10 building on Assignment 5
+##Jennifer Ray
+
+```{r,echo=FALSE}
+rm(list=ls())
+library(tidyverse)
+library(forcats)
+library(ModelMetrics)
+library(modelr)
+```
+
+
+##In this assignment, you'll be asked to predict reading scores using the ELS data.
+
+##1. Create a regression that predicts reading scores as a function of SES, using the training data.
+
+$$Y=\beta_0+\beta_1 x_1 +\beta_2 x_2+ ... \beta_k x_k + \epsilon$$
+  
+```{r}
+load("C:/Users/rayjm2/Desktop/Scripts/Week 5/els.Rdata")
+```
+
+```{r}
+els%>%summarize(mean(bynels2m,na.rm=TRUE))
+
+gg<-ggplot(els,aes(x=bynels2r))
+gg<-gg+geom_histogram()
+gg
+```
+
+```{r}
+gg<-ggplot(els,aes(x=bynels2r))
+gg<-gg+geom_density()
+gg
+```
+```{r}
+
+#Model 1: simple bivariate regression
+
+mod1<-lm(bynels2r~byses1,data=els) #outcome on left, predictor on right 
+
+summary(mod1)
+confint(mod1)
+
+g1<-ggplot(els, aes(x=byses1,y=bynels2r))+ #specify data and x and y
+           geom_point(shape=1)+ #specify points
+           geom_smooth(method=lm) #ask for lm line
+g1
+
+els<-els%>%add_predictions(mod1)%>%rename(pred1=pred) #predict using data in memory
+ 
+## RMSE
+rmse_1<-modelr::rmse(mod1,els);rmse_1
+
+```
+
+
+
+##2. Report the RMSE from a validation of your model using the testing data.
+##RMSE = 8.55
+
+##3. Add another covariate to your model from 1.
+```{r}
+#Part 2: Multiple regression
+
+mod2<-lm(bynels2r~as.factor(bypared_nohs)+
+           byses1,
+          data=els)
+
+summary(mod2) 
+
+els<-els%>%add_predictions(mod2)%>%rename(pred2=pred)
+
+rmse_2<-modelr::rmse(mod2,els); rmse_2
+
+```
+
+##4. Again report the RMSE from a validation of your model using the testing data. Did you model improve? By how much?
+ ##RMSE = 8.55
+ ## This did not improve much... only by 0.01
+ ## This is not a comparable predictor
+ 
+ 
+##Assignment 10
+##Based on your work in assignment 5, do the following:
+##1. Create a 10-fold cross validation of your linear model predicting reading scores as a function of at least two covariates. Provide a summary table or graphic of the RMSEs from this cross validation.
+
+
+```{r}
+els_cf<-els%>%
+  crossv_kfold(20)
+els_cf
+```
+
+```{r}
+rmse_mod1<-els_cf %>% 
+  mutate(train = map(train, as_tibble)) %>% ## Convert to tibbles
+  mutate(model = map(train, ~ lm(mod1,
+                                 data = .))) %>%
+  mutate(rmse = map2_dbl(model, test, rmse)) %>% ## apply model, get rmse
+  select(.id, rmse) ## pull just id and rmse 
+```
+```{r}
+summary(rmse_mod1$rmse)
+
+gg<-ggplot(rmse_mod1,aes(rmse))
+gg<-gg+geom_density()
+gg
+```
+
+
+
+##2. Using a random partition, create 100 separate cross validations of your linear model predicting reading scores as a function of at least two covariates.
+
+```{r}
+els_cv<-els%>%
+  crossv_mc(n=100,test=.2)
+els_cv
+```
+##Provide a summary table or graphic of the RMSEs from this cross validation.
+ 
+```{r}
+mod1_rmse_cv<-els_cv %>% 
+  mutate(train = map(train, as_tibble)) %>% ## Convert to tibbles
+  mutate(model = map(train, ~ lm(mod1, data = .)))%>%
+  mutate(rmse = map2_dbl(model, test, rmse))%>% 
+  select(.id, rmse) ## pull just id and rmse 
+
+mod1_rmse_cv
+``` 
+ 
+ 
+```{r}
+summary(mod1_rmse_cv$rmse)
+
+gg<-ggplot(mod1_rmse_cv,aes(rmse))
+gg<-gg+geom_density(bins=50,fill="blue",alpha=.2)
+gg
+
+```
+
+
+
+```{r}
+
+## Define the model
+mod2_formula<-formula("home_rank ~ 
+                      coll_grad_pc + 
+                      per_capita_inc+
+                      homeown_rate+
+                      median_hh_inc")
+
+
+mod2_rmse_cv<-els_cv %>% 
+  mutate(train = map(train, as_tibble)) %>% ## Convert to tibbles
+  mutate(model = map(train, ~ lm(mod2, data = .)))%>%
+  mutate(rmse = map2_dbl(model, test, rmse))%>% 
+  select(.id, rmse) ## pull just id and rmse 
+
+summary(mod2_rmse_cv$rmse)
+summary(mod1_rmse_cv$rmse)
+
+gg<-ggplot(mod2_rmse_cv,aes(x=rmse))
+gg<-gg+geom_density(fill="orange",alpha=.2)
+gg<-gg+geom_density(data=mod1_rmse_cv,aes(x=rmse),fill="blue",alpha=.2)
+gg
+
+```
